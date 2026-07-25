@@ -11,4 +11,7 @@ interface ItemPriceDao {
 
     @Insert
     suspend fun insertAll(items: List<ItemPriceEntity>): List<Long>
+
+    @Query("SELECT * FROM item_prices WHERE snapshotId = :snapshotId")
+    suspend fun findBySnapshot(snapshotId: Long): List<ItemPriceEntity>
 }

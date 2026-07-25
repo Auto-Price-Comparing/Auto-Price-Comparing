@@ -27,6 +27,7 @@ class OverlayView(context: Context) : LinearLayout(context) {
     private val rowsContainer: LinearLayout
     private val bestLabel: TextView
     private val redPacketInput: EditText
+    private val confirmBtn: Button
     private val footer: TextView
 
     private var stores: List<StoreInfo> = emptyList()
@@ -35,12 +36,14 @@ class OverlayView(context: Context) : LinearLayout(context) {
     private var editMode: Boolean = false
     private var serviceEnabled: Boolean = true
     private var confirmedPairs: Set<NamePair> = emptySet()
+    private var pendingPairs: List<NamePair> = emptyList()
 
     private var downX = 0f
     private var downY = 0f
 
     var onDrag: ((dx: Int, dy: Int) -> Unit)? = null
     var onToggleEditMode: ((focusable: Boolean) -> Unit)? = null
+    var onConfirmPending: ((List<NamePair>) -> Unit)? = null
 
     init {
         orientation = VERTICAL
@@ -99,6 +102,16 @@ class OverlayView(context: Context) : LinearLayout(context) {
                 override fun onTextChanged(p0: CharSequence?, p1: Int, p2: Int, p3: Int) {}
             })
         }
+        confirmBtn = Button(context).apply {
+            text = "确认匹配"
+            visibility = View.GONE
+            setOnClickListener {
+                onConfirmPending?.invoke(pendingPairs)
+            }
+            layoutParams = LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT).apply {
+                topMargin = 8
+            }
+        }
         footer = TextView(context).apply {
             text = "M2 · fixtures 假数据"
             setTextColor(Color.parseColor("#88FFFFFF"))
@@ -108,6 +121,7 @@ class OverlayView(context: Context) : LinearLayout(context) {
         addView(rowsContainer)
         addView(bestLabel)
         addView(redPacketInput)
+        addView(confirmBtn)
         addView(footer)
     }
 
@@ -134,6 +148,7 @@ class OverlayView(context: Context) : LinearLayout(context) {
         if (!serviceEnabled) {
             rowsContainer.visibility = View.GONE
             redPacketInput.visibility = View.GONE
+            confirmBtn.visibility = View.GONE
             footer.visibility = View.GONE
             bestLabel.visibility = View.VISIBLE
             bestLabel.text = "请先开启无障碍服务"
@@ -150,6 +165,7 @@ class OverlayView(context: Context) : LinearLayout(context) {
 
         if (stores.isEmpty()) {
             bestLabel.text = "暂无数据"
+            confirmBtn.visibility = View.GONE
             return
         }
 
@@ -184,18 +200,31 @@ class OverlayView(context: Context) : LinearLayout(context) {
         }
 
         bestLabel.text = strategy.reason
-        footer.text = matchSummary()
+        renderMatchSummary()
     }
 
-    private fun matchSummary(): String {
+    private fun renderMatchSummary() {
         val meituan = stores.firstOrNull { it.platform == "meituan" }
         val flash = stores.firstOrNull { it.platform == "flash" }
-        if (meituan == null || flash == null) return "M2 · fixtures 假数据"
+        if (meituan == null || flash == null) {
+            pendingPairs = emptyList()
+            confirmBtn.visibility = View.GONE
+            footer.text = "M2 · fixtures 假数据"
+            return
+        }
         val matches = ProductMatcher.match(meituan, flash, confirmedPairs)
         val auto = matches.count { it.matched && !it.needsConfirm }
-        val confirm = matches.count { it.needsConfirm }
-        val unmatched = matches.size - auto - confirm
-        return "匹配: 自动 $auto / 待确认 $confirm / 未配 $unmatched"
+        val pending = matches.filter { it.needsConfirm }
+        val unmatched = matches.size - auto - pending.size
+
+        pendingPairs = pending.mapNotNull { m ->
+            val a = m.itemA?.name ?: return@mapNotNull null
+            val b = m.itemB?.name ?: return@mapNotNull null
+            NamePair(a, b)
+        }
+        footer.text = "匹配: 自动 $auto / 待确认 ${pending.size} / 未配 $unmatched"
+        confirmBtn.visibility = if (pendingPairs.isEmpty()) View.GONE else View.VISIBLE
+        confirmBtn.text = "确认 ${pendingPairs.size} 项匹配"
     }
 
     private fun toggleCollapse() {

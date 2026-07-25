@@ -75,6 +75,9 @@ class OverlayService : Service() {
             }
             windowManager.updateViewLayout(view, params)
         }
+        view.onConfirmPending = { pairs ->
+            pairs.forEach { matchMemory.confirm(it.nameA, it.nameB, "meituan", "flash") }
+        }
 
         windowManager.addView(view, params)
 

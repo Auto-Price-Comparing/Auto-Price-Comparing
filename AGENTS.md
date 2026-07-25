@@ -17,6 +17,13 @@
 
 无单元测试框架引入（M0 阶段）；M1 起补 `app/src/test/` 与 `app/src/androidTest/`。
 
+## Git / 提交与推送
+
+- **推送前必须获得用户明确认可**：任何 `git push`（含 `git push --force` / `--force-with-lease`、推 `main` 等共享分支）执行前都要先向用户说明将推送的内容（改动文件 / commit message / 目标分支）并等待确认，未获认可不得推送。
+- 本地 `git add` / `git commit` 可自行执行；`git push` 是与远端同步的边界动作，需把关。
+- 远端：`git@github.com:Auto-Price-Comparing/Auto-Price-Comparing.git`，默认分支 `main`。SSH 密钥已配置（GitHub 用户 `Joooa-code`）。
+- 分支策略：A/B 建议开功能分支 PR 合 `main`；C 短分支或直接 `main`，但推送前同样需认可。
+
 ## 模块与成员边界
 
 | 成员 | 拥有目录 | 禁止触碰 |
@@ -42,3 +49,5 @@ A/B 把真实外卖 App 节点树 dump 成 JSON 放入 `app/src/main/assets/fixt
 待 A/B 交付真实解析器后：A/B 调 `StoreRepository.push(StoreInfo)` 推真数据替换 fixtures；`FixtureProvider` 降级为离线兜底。
 
 - **M2（完成，fixtures 驱动）**：`engine/store/StoreNameNormalizer`（NFKD 全角→半、去括号内容、分隔符归一、trim、lower）；`engine/match/ProductMatcher`（`NamePair`/`ItemMatch`、Levenshtein 相似度、贪心匹配、自动 ≥0.85 / 待确认 0.6–0.85 / 未配 <0.6 三档、确认对覆盖）；`engine/strategy/StrategyRecommender`（`Strategy`：最优平台 + reason + perPlatform，复用 `ActualPriceCalculator`）；`data/db` `ProductMatchEntity`+`ProductMatchDao`，AppDatabase v2 + `fallbackToDestructiveMigration`；`data/repo/MatchMemory`（`confirmed: StateFlow<Set<NamePair>>` + `confirm(...)` 落库）；`OverlayView` 改走 `StrategyRecommender` + 底部匹配概要（自动/待确认/未配），`OverlayService` 采 `MatchMemory.confirmed`。单测覆盖三个引擎（`StoreNameNormalizerTest`/`ProductMatcherTest`/`StrategyRecommenderTest`）。
+- **M2 手动确认闭环（完成）**：`OverlayView` 待确认>0 时显示「确认 N 项匹配」按钮，`onConfirmPending` 回调；`OverlayService` 接到后对每对调 `MatchMemory.confirm(nameA,nameB,"meituan","flash")` → `confirmed` StateFlow 刷新 → 悬浮窗重算，待确认数清零。
+- **M3 商家分析（完成，fixtures 驱动）**：`engine/SnapshotPricer`（纯函数 商品+包装+配送）+单测；`ItemPriceDao.findBySnapshot`、`StoreSnapshotDao.count`；`StoreRepository.historyFor(store,limit): Flow<List<HistoryPoint>>`（按快照重算参考价）+ `recordAll` + `seedIfEmpty`（首次空库播种 7 条带价格漂移的演示快照）；`ui/ChartView`（Canvas 折线+填充+高低标）；`ui/MerchantAnalysisView`（跨平台对比表 评分/月售/配送/起送 + `StrategyRecommender` reason + 历史图 + 「记录当前快照」按钮）；`MainActivity` 加「商家分析」入口切换视图，采集 `stores` 与 `historyFor` 两路 Flow。
