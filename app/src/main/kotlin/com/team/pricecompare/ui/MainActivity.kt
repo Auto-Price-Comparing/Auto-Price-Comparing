@@ -3,6 +3,7 @@ package com.team.pricecompare.ui
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.os.PowerManager
 import android.provider.Settings
 import android.widget.Button
 import android.widget.LinearLayout
@@ -13,7 +14,9 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.team.pricecompare.data.db.AppDatabase
+import com.team.pricecompare.data.repo.FakeCollectionOrchestrator
 import com.team.pricecompare.data.repo.StoreRepository
+import com.team.pricecompare.parsers.CollectionState
 import com.team.pricecompare.overlay.OverlayController
 import com.team.pricecompare.overlay.OverlayService
 import kotlinx.coroutines.launch
@@ -22,15 +25,19 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var homeRoot: LinearLayout
     private lateinit var analysisRoot: LinearLayout
+    private lateinit var collectionRoot: LinearLayout
     private lateinit var analysisView: MerchantAnalysisView
+    private lateinit var collectionView: CollectionView
     private lateinit var statusView: TextView
 
     private var currentStores: List<com.team.pricecompare.data.StoreInfo> = emptyList()
+    private val orchestrator = FakeCollectionOrchestrator()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         buildHomeRoot()
         buildAnalysisRoot()
+        buildCollectionRoot()
         setContentView(homeRoot)
 
         val repo = StoreRepository.get(AppDatabase.get(this))
@@ -76,6 +83,10 @@ class MainActivity : AppCompatActivity() {
         actionBtn.setOnClickListener { onAction() }
         val analyzeBtn = Button(this).apply { text = "商家分析" }
         analyzeBtn.setOnClickListener { setContentView(analysisRoot) }
+        val collectBtn = Button(this).apply { text = "一键全采（V2）" }
+        collectBtn.setOnClickListener { setContentView(collectionRoot) }
+        val batteryBtn = Button(this).apply { text = "关闭电池优化" }
+        batteryBtn.setOnClickListener { requestIgnoreBatteryOptimizations() }
         val info = TextView(this).apply {
             text = "外卖比价助手\n\n1) 授予悬浮窗权限\n2) 开启无障碍服务\n3) 打开美团店铺页看悬浮窗"
             textSize = 16f
@@ -86,17 +97,14 @@ class MainActivity : AppCompatActivity() {
             addView(statusView)
             addView(actionBtn)
             addView(analyzeBtn)
+            addView(collectBtn)
+            addView(batteryBtn)
             addView(info)
         }
     }
 
     private fun buildAnalysisRoot() {
-        analysisView = MerchantAnalysisView(this).apply {
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                0,
-            )
-        }
+        analysisView = MerchantAnalysisView(this)
         analysisView.onRecordSnapshot = {
             lifecycleScope.launch {
                 StoreRepository.get(AppDatabase.get(this@MainActivity)).recordAll(currentStores)
@@ -109,6 +117,33 @@ class MainActivity : AppCompatActivity() {
         analysisRoot = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             addView(analysisView, LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f
+            ))
+            addView(backBtn)
+        }
+    }
+
+    private fun buildCollectionRoot() {
+        collectionView = CollectionView(this)
+        collectionView.onCollect = { storeName ->
+            lifecycleScope.launch {
+                val repo = StoreRepository.get(AppDatabase.get(this@MainActivity))
+                orchestrator.collect(storeName).collect { state ->
+                    collectionView.render(state)
+                    if (state is CollectionState.Completed) {
+                        currentStores = state.stores
+                        repo.recordAll(state.stores)
+                    }
+                }
+            }
+        }
+        val backBtn = Button(this).apply {
+            text = "返回"
+            setOnClickListener { setContentView(homeRoot) }
+        }
+        collectionRoot = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            addView(collectionView, LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f
             ))
             addView(backBtn)
@@ -138,6 +173,22 @@ class MainActivity : AppCompatActivity() {
                 this,
                 Intent(this, OverlayService::class.java),
             )
+        }
+    }
+
+    private fun requestIgnoreBatteryOptimizations() {
+        val pm = getSystemService(POWER_SERVICE) as PowerManager
+        if (pm.isIgnoringBatteryOptimizations(packageName)) {
+            statusView.text = statusView.text.toString() + "\n电池优化：已豁免"
+            return
+        }
+        try {
+            startActivity(
+                Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS)
+                    .setData(Uri.parse("package:$packageName"))
+            )
+        } catch (_: Exception) {
+            startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
         }
     }
 

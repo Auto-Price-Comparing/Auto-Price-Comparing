@@ -38,8 +38,30 @@
 
 - M0（完成）：C 脚手架
 - M1 早期（完成，fixtures 驱动）：引擎单测、`StoreRepository`、悬浮窗 v2 对比卡、`OverlayController` 生命周期
+- M2（完成）：店名/商品匹配 + 策略 + 确认闭环
+- M3（完成）：商家分析屏 + 历史价格曲线
+- M4（完成，fixtures 假编排）：一键全采屏 + 进度 + 结果
+- M5（完成）：容错包装、保活、lint、release 侧载签名
 
 详见 `AGENTS.md`「当前进度」段。
+
+## 保活与 ROM 适配
+
+国产 ROM 杀后台是最大工程坑，装机后必做：
+
+- 小米/红米：设置 → 应用 → 外卖比价助手 → 省电策略「无限制」+ 自启动开
+- 华为/荣耀：设置 → 电池 → 启动管理 → 改为「手动管理」并全开
+- OPPO/vivo：设置 → 电池 → 应用耗电管理 → 允许后台运行
+- 通用：App 内「关闭电池优化」按钮，或 `设置 → 应用 → 特殊访问 → 忽略电池优化`
+- 无障碍服务被关后需重新手动开启（系统限制）
+
+## 构建 Release APK（侧载）
+
+```bash
+./gradlew assembleRelease          # 产物：app/build/outputs/apk/release/app-release.apk
+```
+
+release 用 debug 签名（`signingConfig = debug`），便于组内自测侧载；正式分发需自备 keystore 并替换 `signingConfigs`。`adb install -r app-release.apk` 装机。
 
 ## 合规提示
 
