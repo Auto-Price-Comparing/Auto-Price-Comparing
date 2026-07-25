@@ -15,7 +15,9 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import com.team.pricecompare.data.StoreInfo
 import com.team.pricecompare.data.UserDealInput
-import com.team.pricecompare.engine.ActualPriceCalculator
+import com.team.pricecompare.engine.match.NamePair
+import com.team.pricecompare.engine.match.ProductMatcher
+import com.team.pricecompare.engine.strategy.StrategyRecommender
 
 class OverlayView(context: Context) : LinearLayout(context) {
 
@@ -32,6 +34,7 @@ class OverlayView(context: Context) : LinearLayout(context) {
     private var collapsed: Boolean = false
     private var editMode: Boolean = false
     private var serviceEnabled: Boolean = true
+    private var confirmedPairs: Set<NamePair> = emptySet()
 
     private var downX = 0f
     private var downY = 0f
@@ -97,7 +100,7 @@ class OverlayView(context: Context) : LinearLayout(context) {
             })
         }
         footer = TextView(context).apply {
-            text = "M1 · fixtures 假数据"
+            text = "M2 · fixtures 假数据"
             setTextColor(Color.parseColor("#88FFFFFF"))
             textSize = 10f
             setPadding(0, 10, 0, 0)
@@ -115,6 +118,11 @@ class OverlayView(context: Context) : LinearLayout(context) {
 
     fun setServiceEnabled(enabled: Boolean) {
         serviceEnabled = enabled
+        renderRows()
+    }
+
+    fun setConfirmed(pairs: Set<NamePair>) {
+        confirmedPairs = pairs
         renderRows()
     }
 
@@ -144,19 +152,17 @@ class OverlayView(context: Context) : LinearLayout(context) {
             bestLabel.text = "暂无数据"
             return
         }
-        val deals = stores.map { it to ActualPriceCalculator.calculate(it, UserDealInput(redPacket = redPacket)) }
-        val bestDeal = deals.minByOrNull { it.second.finalPrice }
-        val bestPrice = bestDeal?.second?.finalPrice
 
-        for ((store, deal) in deals) {
-            val isBest = deal.finalPrice == bestPrice
+        val strategy = StrategyRecommender.recommend(stores, UserDealInput(redPacket = redPacket))
+        for (deal in strategy.perPlatform) {
+            val isBest = deal.platform == strategy.bestPlatform
             val row = LinearLayout(context).apply {
                 orientation = HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
                 setPadding(0, 8, 0, 8)
             }
             val name = TextView(context).apply {
-                text = platformLabel(store.platform)
+                text = platformLabel(deal.platform)
                 setTextColor(if (isBest) Color.parseColor("#69F0AE") else Color.WHITE)
                 textSize = 13f
                 layoutParams = LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f)
@@ -177,9 +183,19 @@ class OverlayView(context: Context) : LinearLayout(context) {
             rowsContainer.addView(row)
         }
 
-        bestLabel.text = bestDeal?.let { (s, d) ->
-            "推荐: ${platformLabel(s.platform)} ¥" + "%.2f".format(d.finalPrice)
-        } ?: ""
+        bestLabel.text = strategy.reason
+        footer.text = matchSummary()
+    }
+
+    private fun matchSummary(): String {
+        val meituan = stores.firstOrNull { it.platform == "meituan" }
+        val flash = stores.firstOrNull { it.platform == "flash" }
+        if (meituan == null || flash == null) return "M2 · fixtures 假数据"
+        val matches = ProductMatcher.match(meituan, flash, confirmedPairs)
+        val auto = matches.count { it.matched && !it.needsConfirm }
+        val confirm = matches.count { it.needsConfirm }
+        val unmatched = matches.size - auto - confirm
+        return "匹配: 自动 $auto / 待确认 $confirm / 未配 $unmatched"
     }
 
     private fun toggleCollapse() {

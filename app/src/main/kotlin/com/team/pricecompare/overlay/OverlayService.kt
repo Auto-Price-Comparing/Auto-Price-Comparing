@@ -13,6 +13,7 @@ import android.view.Gravity
 import android.view.WindowManager
 import androidx.core.app.NotificationCompat
 import com.team.pricecompare.data.db.AppDatabase
+import com.team.pricecompare.data.repo.MatchMemory
 import com.team.pricecompare.data.repo.StoreRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -78,6 +79,7 @@ class OverlayService : Service() {
         windowManager.addView(view, params)
 
         val repo = StoreRepository.get(AppDatabase.get(this))
+        val matchMemory = MatchMemory.get(AppDatabase.get(this))
         scope.launch {
             OverlayController.accessibilityEnabled.collect { enabled ->
                 overlayView?.setServiceEnabled(enabled)
@@ -86,6 +88,11 @@ class OverlayService : Service() {
         scope.launch {
             repo.stores.collect { list ->
                 overlayView?.setStores(list)
+            }
+        }
+        scope.launch {
+            matchMemory.confirmed.collect { pairs ->
+                overlayView?.setConfirmed(pairs)
             }
         }
     }
