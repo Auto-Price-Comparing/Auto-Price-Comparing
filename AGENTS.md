@@ -1,0 +1,42 @@
+# AGENTS.md — 外卖比价助手
+
+双平台（美团 meituan / 淘宝闪购 flash）本地比价 App。Android 原生 + Kotlin，`minSdk 26`，真机开发。
+
+## 构建
+
+本仓库不含 Gradle wrapper jar（生成环境无 Gradle）。用 Android Studio 打开 `takeaway-compare/`，让 IDE 生成 wrapper 后 sync，或在本机装 Gradle 8.x 后于根目录执行 `gradle wrapper` 生成 `gradlew`。
+
+常用命令（生成 wrapper 后）：
+
+```bash
+./gradlew assembleDebug            # 构建 debug APK
+./gradlew installDebug             # 装机到已连接真机
+./gradlew lint                     # Android Lint
+./gradlew :app:dependencies        # 依赖树
+```
+
+无单元测试框架引入（M0 阶段）；M1 起补 `app/src/test/` 与 `app/src/androidTest/`。
+
+## 模块与成员边界
+
+| 成员 | 拥有目录 | 禁止触碰 |
+|------|----------|----------|
+| A · 采集框架 + 美团 | `parsers/CollectorAccessibilityService.kt`、`parsers/ParserInterface.kt` 的美团实现、V2 手势框架 | `engine/`、`overlay/`、`ui/`、`data/` |
+| B · 淘宝闪购 | `parsers/` 下的 flash 解析器、`AppLauncher.kt` | 同上 |
+| C · 逻辑+UI+工程 | `data/`、`engine/`、`overlay/`、`ui/`、构建配置 | `parsers/` 内任何节点树代码 |
+
+唯一对接面：
+- `data/Models.kt` — `StoreInfo` / `ItemPrice` / `UserDealInput` / `Deal`（改字段须三人协商，并同步 fixtures）
+- `parsers/ParserInterface.kt` — C 定义接口，A/B 各自实现 `fun parse(root): StoreInfo?`
+
+## fixtures 工作流
+
+A/B 把真实外卖 App 节点树 dump 成 JSON 放入 `app/src/main/assets/fixtures/`（目录待建），C 的 `data/repo/FixtureProvider.kt` 当前用内置假数据，M1 起改为读 JSON。
+
+## 当前进度
+
+- **M0（完成）**：C 脚手架——工程结构、`Models.kt`、Room 空壳、`FixtureProvider`、`ActualPriceCalculator`、`OverlayService`+`OverlayView`、`MainActivity`、Manifest 与资源。出口标准：真机打开美团店铺页，悬浮窗稳定浮于上方并显示假数据。
+- **M1 早期（完成，fixtures 驱动）**：`ActualPriceCalculator` JUnit 单测（`app/src/test/`）；`StoreRepository`（`Flow<List<StoreInfo>>` + Room 持久化 + `StoreInfoEmitter` 供 A/B push；`push()` 即协程落库 + 5s 去重；`StoreSnapshotDao.observeByName` 备 M3 曲线）；`OverlayView` v2 双平台对比卡（美团/淘宝闪购实付价并排、最优高亮、可收起、红包 `EditText` 喂 `UserDealInput` 实时重算、无障碍未开时显示「请先开启无障碍服务」兜底）；`OverlayService` 订阅 Repository Flow + 控制器 `accessibilityEnabled` + 编辑模式窗口标志切换。
+- **P4（完成）**：`overlay/OverlayController.kt`——绑定无障碍开关状态。`ContentObserver` 监听 `Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES`，对外暴露 `accessibilityEnabled: StateFlow<Boolean>`；`ensureService(context)` 在开启 + 悬浮窗权限已授时 `startForegroundService(OverlayService)`、否则 `stopService`，由 `collect` 联动 + `MainActivity.onResume` 兜底（覆盖授悬浮窗权限后返回场景，因 `Settings.canDrawOverlays` 无 URI 可监听）。`App`（`Application` 子类）`onCreate` 调 `bind` 实现进程级注册，覆盖 App 在后台/未开 Activity 时用户切无障碍。`MainActivity` 订阅 Flow 刷新 UI（按钮三态：开无障碍/授悬浮窗/启动）。`OverlayService` 声明 `foregroundServiceType="specialUse"` + `PROPERTY_SPECIAL_USE_FGS_SUBTYPE` + `FOREGROUND_SERVICE_SPECIAL_USE` 权限（Android 14）。`OverlayControllerMatchTest` 覆盖 `matchesEnabledService` 纯函数（null/空串/多条分隔/大小写/空格/前缀子串防误匹配）。
+
+待 A/B 交付真实解析器后：A/B 调 `StoreRepository.push(StoreInfo)` 推真数据替换 fixtures；`FixtureProvider` 降级为离线兜底。
