@@ -13,6 +13,7 @@ import android.widget.Button
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.TextView
+import com.team.pricecompare.Morandi
 import com.team.pricecompare.data.StoreInfo
 import com.team.pricecompare.data.UserDealInput
 import com.team.pricecompare.engine.match.NamePair
@@ -47,8 +48,8 @@ class OverlayView(context: Context) : LinearLayout(context) {
 
     init {
         orientation = VERTICAL
-        setPadding(28, 22, 28, 22)
-        setBackgroundColor(Color.parseColor("#CC111111"))
+        setPadding(32, 24, 32, 24)
+        background = Morandi.card(context, Morandi.overlayBg, 22f, Morandi.overlayStroke, 0.5f)
 
         val headerRow = LinearLayout(context).apply {
             orientation = HORIZONTAL
@@ -56,21 +57,12 @@ class OverlayView(context: Context) : LinearLayout(context) {
         }
         header = TextView(context).apply {
             text = "外卖比价"
-            setTextColor(Color.WHITE)
+            setTextColor(Morandi.overlayText)
             textSize = 14f
             layoutParams = LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f)
         }
-        editBtn = Button(context).apply {
-            text = "✎"
-            setOnClickListener { toggleEditMode() }
-            layoutParams = LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT).apply {
-                marginEnd = 12
-            }
-        }
-        collapseBtn = Button(context).apply {
-            text = "—"
-            setOnClickListener { toggleCollapse() }
-        }
+        editBtn = compactButton("✎") { toggleEditMode() }
+        collapseBtn = compactButton("—") { toggleCollapse() }
         headerRow.addView(header)
         headerRow.addView(editBtn)
         headerRow.addView(collapseBtn)
@@ -78,19 +70,21 @@ class OverlayView(context: Context) : LinearLayout(context) {
 
         rowsContainer = LinearLayout(context).apply { orientation = VERTICAL }
         bestLabel = TextView(context).apply {
-            setTextColor(Color.parseColor("#69F0AE"))
+            setTextColor(Morandi.overlayBest)
             textSize = 13f
-            setPadding(0, 10, 0, 0)
+            setPadding(0, 12, 0, 0)
         }
         redPacketInput = EditText(context).apply {
             hint = "红包金额"
             inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
             textSize = 13f
-            setTextColor(Color.WHITE)
-            setHintTextColor(Color.parseColor("#88FFFFFF"))
+            setTextColor(Morandi.overlayText)
+            setHintTextColor(Morandi.overlaySub)
+            background = Morandi.card(context, Color.parseColor("#33ECE6DC"), 8f)
+            setPadding(20, 14, 20, 14)
             isFocusableInTouchMode = true
             layoutParams = LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT).apply {
-                topMargin = 12
+                topMargin = 14
             }
             addTextChangedListener(object : TextWatcher {
                 override fun afterTextChanged(s: Editable?) {
@@ -104,19 +98,19 @@ class OverlayView(context: Context) : LinearLayout(context) {
         }
         confirmBtn = Button(context).apply {
             text = "确认匹配"
+            setTextColor(Morandi.overlayOnAccent)
+            background = Morandi.card(context, Morandi.overlayBest, 8f)
             visibility = View.GONE
-            setOnClickListener {
-                onConfirmPending?.invoke(pendingPairs)
-            }
+            setOnClickListener { onConfirmPending?.invoke(pendingPairs) }
             layoutParams = LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT).apply {
-                topMargin = 8
+                topMargin = 10
             }
         }
         footer = TextView(context).apply {
             text = "M2 · fixtures 假数据"
-            setTextColor(Color.parseColor("#88FFFFFF"))
+            setTextColor(Morandi.overlaySub)
             textSize = 10f
-            setPadding(0, 10, 0, 0)
+            setPadding(0, 12, 0, 0)
         }
         addView(rowsContainer)
         addView(bestLabel)
@@ -124,6 +118,19 @@ class OverlayView(context: Context) : LinearLayout(context) {
         addView(confirmBtn)
         addView(footer)
     }
+
+    private fun compactButton(label: String, onClick: () -> Unit): Button =
+        Button(context).apply {
+            text = label
+            setTextColor(Morandi.overlayText)
+            setBackgroundColor(Color.TRANSPARENT)
+            setOnClickListener { onClick() }
+            layoutParams = LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT).apply {
+                marginStart = 10
+            }
+            minWidth = 0
+            minimumWidth = 0
+        }
 
     fun setStores(list: List<StoreInfo>) {
         stores = list
@@ -152,10 +159,10 @@ class OverlayView(context: Context) : LinearLayout(context) {
             footer.visibility = View.GONE
             bestLabel.visibility = View.VISIBLE
             bestLabel.text = "请先开启无障碍服务"
-            bestLabel.setTextColor(Color.parseColor("#FF8A80"))
+            bestLabel.setTextColor(Morandi.overlayWarn)
             return
         }
-        bestLabel.setTextColor(Color.parseColor("#69F0AE"))
+        bestLabel.setTextColor(Morandi.overlayBest)
 
         val vis = bodyVisibility()
         rowsContainer.visibility = vis
@@ -175,22 +182,23 @@ class OverlayView(context: Context) : LinearLayout(context) {
             val row = LinearLayout(context).apply {
                 orientation = HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
-                setPadding(0, 8, 0, 8)
+                setPadding(16, 10, 16, 10)
+                if (isBest) background = Morandi.card(context, Morandi.overlayBest, 8f)
             }
             val name = TextView(context).apply {
                 text = platformLabel(deal.platform)
-                setTextColor(if (isBest) Color.parseColor("#69F0AE") else Color.WHITE)
+                setTextColor(if (isBest) Morandi.overlayOnAccent else Morandi.overlayText)
                 textSize = 13f
                 layoutParams = LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f)
             }
             val price = TextView(context).apply {
                 text = "¥" + "%.2f".format(deal.finalPrice)
-                setTextColor(if (isBest) Color.parseColor("#69F0AE") else Color.parseColor("#FFD180"))
+                setTextColor(if (isBest) Morandi.overlayOnAccent else Morandi.overlayPrice)
                 textSize = 13f
             }
             val tag = TextView(context).apply {
                 text = if (isBest) " 最优" else ""
-                setTextColor(Color.parseColor("#69F0AE"))
+                setTextColor(Morandi.overlayOnAccent)
                 textSize = 11f
             }
             row.addView(name)

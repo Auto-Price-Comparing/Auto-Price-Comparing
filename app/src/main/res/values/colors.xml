@@ -2,4 +2,16 @@
 <resources>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+
+    <color name="morandi_screen_bg">#EDE7DE</color>
+    <color name="morandi_surface">#F6F1E8</color>
+    <color name="morandi_primary">#4E4A52</color>
+    <color name="morandi_primary_dark">#3A3740</color>
+    <color name="morandi_text_main">#4E4A52</color>
+    <color name="morandi_text_sub">#8B8590</color>
+    <color name="morandi_best_row">#E3E8DD</color>
+    <color name="morandi_best_text">#6E8B5E</color>
+    <color name="morandi_price_text">#9C7A5A</color>
+    <color name="morandi_warn_text">#B0706A</color>
+    <color name="morandi_divider">#D7CFC4</color>
 </resources>

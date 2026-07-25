@@ -5,7 +5,6 @@ import android.net.Uri
 import android.os.Bundle
 import android.os.PowerManager
 import android.provider.Settings
-import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
@@ -13,6 +12,8 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import com.google.android.material.button.MaterialButton
+import com.team.pricecompare.Morandi
 import com.team.pricecompare.data.db.AppDatabase
 import com.team.pricecompare.data.repo.FakeCollectionOrchestrator
 import com.team.pricecompare.data.repo.StoreRepository
@@ -77,23 +78,22 @@ class MainActivity : AppCompatActivity() {
     private fun buildHomeRoot() {
         statusView = TextView(this).apply {
             textSize = 14f
-            setPadding(48, 48, 48, 24)
+            setTextColor(Morandi.textMain)
+            setPadding(48, 56, 48, 24)
         }
-        val actionBtn = Button(this).apply { text = "启动悬浮窗" }
-        actionBtn.setOnClickListener { onAction() }
-        val analyzeBtn = Button(this).apply { text = "商家分析" }
-        analyzeBtn.setOnClickListener { setContentView(analysisRoot) }
-        val collectBtn = Button(this).apply { text = "一键全采（V2）" }
-        collectBtn.setOnClickListener { setContentView(collectionRoot) }
-        val batteryBtn = Button(this).apply { text = "关闭电池优化" }
-        batteryBtn.setOnClickListener { requestIgnoreBatteryOptimizations() }
+        val actionBtn = homeButton("启动悬浮窗") { onAction() }
+        val analyzeBtn = homeButton("商家分析") { setContentView(analysisRoot) }
+        val collectBtn = homeButton("一键全采（V2）") { setContentView(collectionRoot) }
+        val batteryBtn = homeButton("关闭电池优化") { requestIgnoreBatteryOptimizations() }
         val info = TextView(this).apply {
             text = "外卖比价助手\n\n1) 授予悬浮窗权限\n2) 开启无障碍服务\n3) 打开美团店铺页看悬浮窗"
-            textSize = 16f
+            textSize = 15f
+            setTextColor(Morandi.textSub)
             setPadding(48, 24, 48, 48)
         }
         homeRoot = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
+            setBackgroundColor(Morandi.screenBg)
             addView(statusView)
             addView(actionBtn)
             addView(analyzeBtn)
@@ -103,6 +103,16 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun homeButton(text: String, onClick: () -> Unit): MaterialButton =
+        MaterialButton(this).apply {
+            this.text = text
+            setOnClickListener { onClick() }
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+            ).apply { topMargin = 12 }
+        }
+
     private fun buildAnalysisRoot() {
         analysisView = MerchantAnalysisView(this)
         analysisView.onRecordSnapshot = {
@@ -110,12 +120,13 @@ class MainActivity : AppCompatActivity() {
                 StoreRepository.get(AppDatabase.get(this@MainActivity)).recordAll(currentStores)
             }
         }
-        val backBtn = Button(this).apply {
+        val backBtn = MaterialButton(this).apply {
             text = "返回"
             setOnClickListener { setContentView(homeRoot) }
         }
         analysisRoot = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
+            setBackgroundColor(Morandi.screenBg)
             addView(analysisView, LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f
             ))
@@ -137,12 +148,13 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         }
-        val backBtn = Button(this).apply {
+        val backBtn = MaterialButton(this).apply {
             text = "返回"
             setOnClickListener { setContentView(homeRoot) }
         }
         collectionRoot = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
+            setBackgroundColor(Morandi.screenBg)
             addView(collectionView, LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f
             ))

@@ -3,10 +3,11 @@ package com.team.pricecompare.ui
 import android.content.Context
 import android.graphics.Color
 import android.view.Gravity
-import android.widget.Button
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.TextView
+import com.google.android.material.button.MaterialButton
+import com.team.pricecompare.Morandi
 import com.team.pricecompare.data.UserDealInput
 import com.team.pricecompare.engine.strategy.StrategyRecommender
 import com.team.pricecompare.parsers.CollectionState
@@ -14,7 +15,7 @@ import com.team.pricecompare.parsers.CollectionState
 class CollectionView(context: Context) : LinearLayout(context) {
 
     private val storeInput: EditText
-    private val startBtn: Button
+    private val startBtn: MaterialButton
     private val progressView: TextView
     private val resultContainer: LinearLayout
 
@@ -23,33 +24,36 @@ class CollectionView(context: Context) : LinearLayout(context) {
     init {
         orientation = VERTICAL
         setPadding(48, 96, 48, 48)
+        setBackgroundColor(Morandi.screenBg)
 
         addView(TextView(context).apply {
             text = "一键全采（V2）"
-            setTextColor(Color.WHITE)
-            textSize = 18f
-            setPadding(0, 0, 0, 24)
+            setTextColor(Morandi.textMain)
+            textSize = 20f
+            setPadding(0, 0, 0, 20)
         })
         storeInput = EditText(context).apply {
             hint = "店铺名"
             setText("老王盖码饭（示范店）")
-            setTextColor(Color.WHITE)
-            setHintTextColor(Color.parseColor("#88FFFFFF"))
+            setTextColor(Morandi.textMain)
+            setHintTextColor(Morandi.textSub)
+            background = Morandi.card(context, Morandi.surface, 8f)
+            setPadding(20, 14, 20, 14)
         }
         addView(storeInput)
 
-        startBtn = Button(context).apply {
+        startBtn = MaterialButton(context).apply {
             text = "开始全采"
             setOnClickListener { onCollect?.invoke(storeInput.text.toString()) }
             layoutParams = LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT).apply {
-                topMargin = 16
+                topMargin = 20
             }
         }
         addView(startBtn)
 
         progressView = TextView(context).apply {
-            setTextColor(Color.parseColor("#FFD180"))
-            textSize = 13f
+            setTextColor(Morandi.priceText)
+            textSize = 14f
             setPadding(0, 24, 0, 8)
         }
         addView(progressView)
@@ -85,31 +89,39 @@ class CollectionView(context: Context) : LinearLayout(context) {
             val row = LinearLayout(context).apply {
                 orientation = HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
-                setPadding(0, 8, 0, 8)
+                setPadding(20, 14, 20, 14)
+                background = Morandi.card(
+                    context,
+                    if (isBest) Morandi.bestRow else Morandi.surface,
+                    10f,
+                )
+                layoutParams = LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT).apply {
+                    bottomMargin = 10
+                }
             }
             row.addView(TextView(context).apply {
                 text = platformLabel(deal.platform)
-                setTextColor(if (isBest) Color.parseColor("#69F0AE") else Color.WHITE)
+                setTextColor(if (isBest) Morandi.bestText else Morandi.textMain)
                 textSize = 14f
                 layoutParams = LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f)
             })
             row.addView(TextView(context).apply {
                 text = "¥" + "%.2f".format(deal.finalPrice) + if (isBest) "  最优" else ""
-                setTextColor(if (isBest) Color.parseColor("#69F0AE") else Color.parseColor("#FFD180"))
+                setTextColor(if (isBest) Morandi.bestText else Morandi.priceText)
                 textSize = 14f
             })
             resultContainer.addView(row)
         }
-        addViewIfMissing(strategy.reason)
+        addReasonIfMissing(strategy.reason)
     }
 
-    private fun addViewIfMissing(reason: String) {
+    private fun addReasonIfMissing(reason: String) {
         val existing = resultContainer.findViewWithTag<TextView>("reason")
         if (existing == null) {
             resultContainer.addView(TextView(context).apply {
                 tag = "reason"
                 text = reason
-                setTextColor(Color.parseColor("#69F0AE"))
+                setTextColor(Morandi.bestText)
                 textSize = 13f
                 setPadding(0, 12, 0, 0)
             })

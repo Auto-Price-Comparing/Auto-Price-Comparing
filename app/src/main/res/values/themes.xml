@@ -1,4 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.PriceCompare" parent="Theme.MaterialComponents.DayNight.DarkActionBar" />
+
+    <style name="Theme.PriceCompare" parent="Theme.MaterialComponents.Light.NoActionBar">
+        <item name="colorPrimary">@color/morandi_primary</item>
+        <item name="colorPrimaryDark">@color/morandi_primary_dark</item>
+        <item name="colorAccent">@color/morandi_best_text</item>
+        <item name="colorOnPrimary">@color/morandi_surface</item>
+        <item name="android:colorBackground">@color/morandi_screen_bg</item>
+        <item name="android:textColorPrimary">@color/morandi_text_main</item>
+        <item name="android:textColorSecondary">@color/morandi_text_sub</item>
+        <item name="shapeAppearanceSmallComponent">@style/ShapeAppearance.PriceCompare.Small</item>
+    </style>
+
+    <style name="ShapeAppearance.PriceCompare.Small" parent="">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">12dp</item>
+    </style>
 </resources>

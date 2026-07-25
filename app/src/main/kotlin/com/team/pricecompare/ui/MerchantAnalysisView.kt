@@ -6,6 +6,7 @@ import android.view.Gravity
 import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.TextView
+import com.team.pricecompare.Morandi
 import com.team.pricecompare.data.StoreInfo
 import com.team.pricecompare.data.UserDealInput
 import com.team.pricecompare.data.repo.HistoryPoint
@@ -25,30 +26,32 @@ class MerchantAnalysisView(context: Context) : LinearLayout(context) {
     init {
         orientation = VERTICAL
         setPadding(48, 96, 48, 48)
+        setBackgroundColor(Morandi.screenBg)
 
         addView(TextView(context).apply {
             text = "商家分析"
-            setTextColor(Color.WHITE)
-            textSize = 18f
-            setPadding(0, 0, 0, 24)
+            setTextColor(Morandi.textMain)
+            textSize = 20f
+            setPadding(0, 0, 0, 20)
         })
 
         compareContainer = LinearLayout(context).apply { orientation = VERTICAL }
         addView(compareContainer)
 
         strategyLabel = TextView(context).apply {
-            setTextColor(Color.parseColor("#69F0AE"))
+            setTextColor(Morandi.bestText)
             textSize = 14f
-            setPadding(0, 24, 0, 24)
+            setPadding(0, 24, 0, 20)
         }
         addView(strategyLabel)
 
         addView(TextView(context).apply {
             text = "历史参考价（商品+包装+配送，近 30 条）"
-            setTextColor(Color.parseColor("#AAAAAA"))
+            setTextColor(Morandi.textSub)
             textSize = 12f
         })
         chart = ChartView(context).apply {
+            background = Morandi.card(context, Morandi.surface, 12f)
             layoutParams = LayoutParams(LayoutParams.MATCH_PARENT, 0).apply {
                 height = 0
                 weight = 1f
@@ -59,6 +62,8 @@ class MerchantAnalysisView(context: Context) : LinearLayout(context) {
 
         recordBtn = Button(context).apply {
             text = "记录当前快照"
+            background = Morandi.card(context, Morandi.surface, 12f)
+            setTextColor(Morandi.textMain)
             setOnClickListener { onRecordSnapshot?.invoke() }
             layoutParams = LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT).apply {
                 topMargin = 24
@@ -82,8 +87,10 @@ class MerchantAnalysisView(context: Context) : LinearLayout(context) {
             strategyLabel.text = "暂无数据"
             return
         }
-        val header = row("平台", "评分", "月售", "配送", "起送", true)
-        compareContainer.addView(header)
+        val strategy = StrategyRecommender.recommend(stores, UserDealInput())
+        val bestPlatform = strategy.bestPlatform
+
+        compareContainer.addView(row("平台", "评分", "月售", "配送", "起送", header = true, best = false))
         for (s in stores) {
             compareContainer.addView(
                 row(
@@ -92,21 +99,36 @@ class MerchantAnalysisView(context: Context) : LinearLayout(context) {
                     s.monthlySales.toString(),
                     "¥" + "%.0f".format(s.deliveryFee),
                     "¥" + "%.0f".format(s.minOrder),
-                    false,
+                    header = false,
+                    best = s.platform == bestPlatform,
                 )
             )
         }
-        val strategy = StrategyRecommender.recommend(stores, UserDealInput())
         strategyLabel.text = strategy.reason
     }
 
     private fun row(
-        a: String, b: String, c: String, d: String, e: String, header: Boolean
-    ): View = LinearLayout(context).apply {
+        a: String, b: String, c: String, d: String, e: String,
+        header: Boolean, best: Boolean,
+    ): android.view.View = LinearLayout(context).apply {
         orientation = HORIZONTAL
         gravity = Gravity.CENTER_VERTICAL
-        setPadding(0, 10, 0, 10)
-        val color = if (header) Color.parseColor("#FFD180") else Color.parseColor("#DDDDDD")
+        setPadding(20, 16, 20, 16)
+        val bg = when {
+            best -> Morandi.card(context, Morandi.bestRow, 10f)
+            header -> Morandi.card(context, Morandi.surface, 10f)
+            else -> Morandi.card(context, Morandi.surface, 10f)
+        }
+        background = bg
+        val color = when {
+            best -> Morandi.bestText
+            header -> Morandi.priceText
+            else -> Morandi.textMain
+        }
+        val lp = LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT).apply {
+            bottomMargin = 10
+        }
+        layoutParams = lp
         addView(cell(a, 1f, color, header))
         addView(cell(b, 1f, color, header))
         addView(cell(c, 1f, color, header))
@@ -114,11 +136,11 @@ class MerchantAnalysisView(context: Context) : LinearLayout(context) {
         addView(cell(e, 1f, color, header))
     }
 
-    private fun cell(text: String, weight: Float, color: Int, bold: Boolean): TextView =
+    private fun cell(text: String, weight: Float, color: Int, header: Boolean): TextView =
         TextView(context).apply {
             this.text = text
             setTextColor(color)
-            textSize = if (bold) 12f else 13f
+            textSize = if (header) 12f else 13f
             layoutParams = LayoutParams(0, LayoutParams.WRAP_CONTENT, weight)
         }
 

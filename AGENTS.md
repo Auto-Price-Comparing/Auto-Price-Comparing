@@ -17,6 +17,10 @@
 
 无单元测试框架引入（M0 阶段）；M1 起补 `app/src/test/` 与 `app/src/androidTest/`。
 
+## UI 主题（莫兰迪）
+
+色板集中在 `Morandi.kt` + `res/values/colors.xml`。全屏浅暖石底（`#EDE7DE`）+ 雾梅炭文字（`#4E4A52`），最优行雾绿块（`#E3E8DD`/`#6E8B5E`），价格陶土（`#9C7A5A`），警告雾玫红（`#B0706A`）；悬浮窗半透雾梅深（`#EE3D3942`）+ 暖白文字。按钮 `MaterialButton` 走主题（`colorPrimary` 雾梅炭 + 12dp 圆角 `shapeAppearanceSmallComponent`）；卡片/行用 `Morandi.card()` 的 `GradientDrawable` 圆角。改样式只动 `Morandi.kt`/`colors.xml`/`themes.xml` + 各 View 的色值引用，不碰逻辑。
+
 ## Git / 提交与推送
 
 - **推送前必须获得用户明确认可**：任何 `git push`（含 `git push --force` / `--force-with-lease`、推 `main` 等共享分支）执行前都要先向用户说明将推送的内容（改动文件 / commit message / 目标分支）并等待确认，未获认可不得推送。

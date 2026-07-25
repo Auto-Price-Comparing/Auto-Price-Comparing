@@ -7,6 +7,7 @@ import android.graphics.Paint
 import android.graphics.Path
 import android.util.TypedValue
 import android.view.View
+import com.team.pricecompare.Morandi
 import com.team.pricecompare.data.repo.HistoryPoint
 
 class ChartView(context: Context) : View(context) {
@@ -14,20 +15,21 @@ class ChartView(context: Context) : View(context) {
     private var points: List<HistoryPoint> = emptyList()
 
     private val axisPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.parseColor("#555555")
+        color = Morandi.divider
         strokeWidth = dp(1f)
+        style = Paint.Style.STROKE
     }
     private val linePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.parseColor("#69F0AE")
+        color = Morandi.bestText
         strokeWidth = dp(2f)
         style = Paint.Style.STROKE
     }
     private val fillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.parseColor("#2269F0AE")
+        color = Color.parseColor("#336E8B5E")
         style = Paint.Style.FILL
     }
     private val labelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.parseColor("#AAAAAA")
+        color = Morandi.textSub
         textSize = dp(11f)
     }
 
@@ -40,10 +42,11 @@ class ChartView(context: Context) : View(context) {
         super.onDraw(canvas)
         val w = width.toFloat()
         val h = height.toFloat()
-        val pad = dp(6f)
-        canvas.drawRect(pad, pad, w - pad, h - pad, axisPaint)
+        val pad = dp(8f)
+        canvas.drawRoundRect(pad, pad, w - pad, h - pad, dp(10f), dp(10f), axisPaint)
         if (points.size < 2) {
-            canvas.drawText("暂无历史", pad + dp(4f), h / 2f, labelPaint)
+            labelPaint.color = Morandi.textSub
+            canvas.drawText("暂无历史", pad + dp(6f), h / 2f, labelPaint)
             return
         }
 
